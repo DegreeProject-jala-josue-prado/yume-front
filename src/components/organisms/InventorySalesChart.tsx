@@ -1,4 +1,3 @@
-// src/components/InventorySalesChart.tsx
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DataPoint } from '../../types';
 

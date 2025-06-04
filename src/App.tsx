@@ -5,6 +5,7 @@ import SalesPage from './pages/SalesPage';
 import PurchasePage from './pages/PurchasePage';
 import ReportPage from './pages/ReportPage';
 import StockPage from './pages/StockPage';
+import NewPurchaseWizardFormik from './pages/NewPurchaseWizardFormik';
 
 function App() {
     return (
@@ -15,6 +16,7 @@ function App() {
           <Route index element={<Navigate to="sales" replace />} /> 
           <Route path="sales" element={<SalesPage />} />
           <Route path="purchase" element={<PurchasePage />} />
+          <Route path="purchase/new" element={<NewPurchaseWizardFormik />} />
           <Route path="stock" element={<StockPage />} />
           <Route path="report" element={<ReportPage />} />
         </Route>

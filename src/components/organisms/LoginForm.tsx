@@ -4,15 +4,13 @@ import { useNavigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-
-  const handleLogin = (response: any) => {
+  const handleLogin = (response: unknown) => {
     console.log('Login successful', response);
     navigate("/home")
 
   };
 
   return (
-    
     <div className="flex items-center justify-center bg-gray-50">
       <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
         <GoogleLoginButton
@@ -24,5 +22,4 @@ const LoginPage: React.FC = () => {
     
   );
 };
-
 export default LoginPage;

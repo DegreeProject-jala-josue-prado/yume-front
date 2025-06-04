@@ -1,12 +1,10 @@
-// src/pages/StockPage.tsx
 import React, { useState } from 'react';
 
-// Datos de ejemplo para la tabla de stock
 const sampleStock = [
   {
     id: 'SKU-ROB-001',
     woodType: 'Roble (Tronca)',
-    availableQuantity: 150, // Podría ser m³, unidades, Pie Tablar
+    availableQuantity: 150,
     unit: 'm³',
     lastChange: 'Compra #123 - 2023-10-15',
   },
@@ -26,7 +24,6 @@ const sampleStock = [
   }
 ];
 
-// Datos de ejemplo para historial (simplificado)
 const sampleHistory = {
   'SKU-ROB-001': [
     { date: '2023-10-15', type: 'Compra', change: '+150 m³', details: 'Compra #123' },
@@ -49,7 +46,8 @@ const StockPage: React.FC = () => {
 
   const commonInputStyle = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
   const commonLabelStyle = "block text-gray-700 text-sm font-bold mb-2";
-  const commonButtonStyle = "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline";
+  const commonButtonStyle = "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline";
+  const commonButtonStyle2 = "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline";
   const modalButtonCancelStyle = "bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline";
 
   const handleOpenUpdateModal = (item: StockItem) => {
@@ -69,7 +67,6 @@ const StockPage: React.FC = () => {
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Gestión de Stock</h1>
 
-      {/* Filtros y Búsqueda */}
       <div className="mb-6 p-4 bg-white shadow rounded-lg">
         <h2 className="text-xl font-semibold mb-4 text-gray-700">Filtrar Stock</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -79,14 +76,13 @@ const StockPage: React.FC = () => {
           </div>
           {/* Podrías agregar más filtros si es necesario */}
           <div className="flex items-end col-start-3">
-            <button className={`${commonButtonStyle} w-full md:w-auto`}>
+            <button className={`${commonButtonStyle2} w-full md:w-auto`}>
               Buscar / Filtrar
             </button>
           </div>
         </div>
       </div>
 
-      {/* Tabla de Stock */}
       <div className="bg-white shadow rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -162,7 +158,7 @@ const StockPage: React.FC = () => {
                   Cancelar
                 </button>
                 <button
-                  type="submit" // Cambiar a type="button"
+                  type="submit" 
                   onClick={(e) => { e.preventDefault(); setShowUpdateStockModal(false); /* Lógica guardado */ }}
                   className={commonButtonStyle}
                 >
@@ -174,7 +170,6 @@ const StockPage: React.FC = () => {
         </div>
       )}
 
-       {/* Modal para Ver Historial de Stock */}
        {showHistoryModal && selectedStockItem && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
