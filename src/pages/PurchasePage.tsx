@@ -3,59 +3,38 @@ import Button from '../components/atoms/Button';
 import PurchaseModal from '../components/organisms/PurchaseModal';
 import PurchasesTable from '../components/organisms/PurchaseTable';
 import { Purchase } from '../types/Purchase';
+import { Provider } from '../types/Provider';
+import { Transport } from '../types/Transport';
 import PurchaseFilterForm from '../components/molecules/PurchaseFilterForm';
 
-const PURCHASES_STORAGE_KEY = import.meta.env.VITE_PURCHASES_STORAGE_KEY;
+// Claves de Local Storage
+const PURCHASES_STORAGE_KEY = 'purchases_data';
+const PROVIDERS_STORAGE_KEY = 'providers_data';
+const TRANSPORT_STORAGE_KEY = 'transport_data';
+
 const buttonClassStile = "font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline";
 
 const PurchasesPage = () => {
-  const [purchases, setPurchases] = useState<Purchase[]>(() => {
-    const savedPurchases = localStorage.getItem(PURCHASES_STORAGE_KEY);
-    return savedPurchases ? JSON.parse(savedPurchases) : [
-      {
-        id: 1,
-        species: 'Roble',
-        PurchaseDate: '2023-10-15',
-        supplier: 'Maderas del Norte',
-        supplierLocation: 'Región Norte',
-        extractor: 'Juan Pérez',
-        entryDate: '2023-10-14',
-        driver: 'Carlos Gómez',
-        plate: 'ABC-123',
-        brand: 'Volvo',
-        cefo: 'CEFO-001',
-        totalCost: 5500.00,
-      },
-      {
-        id: 2,
-        species: 'Pino',
-        PurchaseDate: '2023-10-20',
-        supplier: 'Forestal Sur',
-        supplierLocation: 'Región Sur',
-        extractor: 'Ana López',
-        entryDate: '2023-10-19',
-        driver: 'Luis Martínez',
-        plate: 'XYZ-789',
-        brand: 'Scania',
-        cefo: 'CEFO-002',
-        totalCost: 3200.00,
-      }
-    ];
-  });
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [transports, setTransports] = useState<Transport[]>([]);
 
-  const [filteredPurchases, setFilteredPurchases] = useState(purchases);
+  const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([]);
   const [filters, setFilters] = useState({ species: '', date: '' });
   const [showModal, setShowModal] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
+  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
 
+  // Cargar todos los datos desde localStorage al iniciar
   useEffect(() => {
-    localStorage.setItem(PURCHASES_STORAGE_KEY, JSON.stringify(purchases));
-    setFilteredPurchases(purchases);
-  }, [purchases]);
+    const savedPurchases = localStorage.getItem(PURCHASES_STORAGE_KEY);
+    setPurchases(savedPurchases ? JSON.parse(savedPurchases) : []);
+    
+    const savedProviders = localStorage.getItem(PROVIDERS_STORAGE_KEY);
+    setProviders(savedProviders ? JSON.parse(savedProviders) : []);
 
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters({ ...filters, [key]: value });
-  };
+    const savedTransports = localStorage.getItem(TRANSPORT_STORAGE_KEY);
+    setTransports(savedTransports ? JSON.parse(savedTransports) : []);
+  }, []);
 
   const applyFilters = () => {
     setFilteredPurchases(
@@ -66,44 +45,73 @@ const PurchasesPage = () => {
     );
   };
 
-  const handleSavePurchase = (newPurchase: Purchase) => {
-    const updated = [...purchases, { ...newPurchase, id: Date.now() }];
-    setPurchases(updated);
+  
+  const handleSavePurchase = (purchaseData: Omit<Purchase, 'id'> & { id?: number }) => {
+    if (purchaseData.id) { 
+      setPurchases(purchases.map(p => 
+        p.id === purchaseData.id ? { ...p, ...purchaseData } as Purchase : p
+      ));
+    } else { 
+      setPurchases([...purchases, { ...purchaseData, id: Date.now() }]);
+    }
+  };
+
+  const handleAddNew = () => {
+    setEditingPurchase(null);
+    setShowModal(true);
+  };
+  
+  const handleEdit = (purchase: Purchase) => {
+    setEditingPurchase(purchase);
+    setShowModal(true);
+  };
+
+  const handleDelete = (purchaseId: number) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta compra?')) {
+      setPurchases(purchases.filter(p => p.id !== purchaseId));
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingPurchase(null);
+  };
+
+    const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-50 min-h-full">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Gestión de Compras</h1>
-      <PurchaseFilterForm filters={filters} onChange={handleFilterChange} onFilter={applyFilters} />
-      <Button 
-        onClick={() => setShowModal(true)} 
-        className={`bg-green-500 hover:bg-green-700 text-white mb-4 ${buttonClassStile}`}
-      >
-        + Registrar Nueva Compra
-      </Button>
-      <PurchasesTable purchases={filteredPurchases} onView={setSelectedPurchase} />
-      {showModal && <PurchaseModal onClose={() => setShowModal(false)} onSave={handleSavePurchase} />}
-      {selectedPurchase && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-start pt-10">
-          <div className="bg-white p-6 rounded shadow-lg max-w-xl">
-            <h3 className="text-xl font-bold mb-2">Detalles de la Compra</h3>
-            <p><strong>Especie:</strong> {selectedPurchase.species}</p>
-            <p><strong>Proveedor:</strong> {selectedPurchase.supplier} ({selectedPurchase.supplierLocation})</p>
-            <p><strong>Extractor:</strong> {selectedPurchase.extractor}</p>
-            <p><strong>Fecha de compra:</strong> {selectedPurchase.PurchaseDate}</p>
-            <p><strong>Transporte:</strong> {selectedPurchase.driver} / {selectedPurchase.plate} ({selectedPurchase.brand})</p>
-            <p><strong>CEFO:</strong> {selectedPurchase.cefo}</p>
-            <p><strong>Costo Total:</strong> ${selectedPurchase.totalCost.toFixed(2)}</p>
-            <div className="flex justify-end mt-4">
-              <Button 
-                onClick={() => setSelectedPurchase(null)} 
-                className={`bg-gray-500 hover:bg-gray-700 text-white ${buttonClassStile}`}
-              >
-                Cerrar
-              </Button>
-            </div>
-          </div>
-        </div>
+      
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+        <PurchaseFilterForm filters={filters} onChange={handleFilterChange} onFilter={applyFilters} />
+      </div>
+
+      <div className="flex justify-end mb-4">
+        <Button 
+          onClick={handleAddNew} 
+          className={`bg-green-500 hover:bg-green-700 text-white ${buttonClassStile}`}
+        >
+          + Registrar Nueva Compra
+        </Button>
+      </div>
+
+      <PurchasesTable 
+        purchases={filteredPurchases} 
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+
+      {showModal && (
+        <PurchaseModal 
+          onClose={handleCloseModal} 
+          onSave={handleSavePurchase} 
+          initialData={editingPurchase}
+          providers={providers}
+          transports={transports}
+        />
       )}
     </div>
   );

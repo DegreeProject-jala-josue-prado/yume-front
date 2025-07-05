@@ -1,55 +1,65 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Button from '../atoms/Button';
 import Input from '../atoms/Input';
 import Label from '../atoms/Label';
-import { PurchaseFormData } from '../../types/Purchase';
 import DimensionInputGroup from '../molecules/DimensionInputGroup';
+import { Purchase, PurchaseFormData } from '../../types/Purchase';
+import { Provider } from '../../types/Provider'; 
+import { Transport } from '../../types/Transport';
 
 const inputClassStile = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
 const buttonClassStile = "font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline";
 
 interface PurchaseModalProps {
   onClose: () => void;
-  onSave: (purchaseData: {
-    id: number;
-    species: string;
-    PurchaseDate: string;
-    supplier: string;
-    supplierLocation: string;
-    extractor: string;
-    entryDate: string;
-    driver: string;
-    plate: string;
-    brand: string;
-    cefo: string;
-    totalCost: number;
-    woodState: 'tronca' | 'seca_tablones';
-  }) => void;
+  onSave: (purchaseData: Omit<Purchase, 'id'> & { id?: number }) => void;
+  initialData?: Purchase | null;
+  providers: Provider[];
+  transports: Transport[];
 }
 
-const PurchaseModal = ({ onClose, onSave }: PurchaseModalProps) => {
+const PurchaseModal = ({ onClose, onSave, initialData, providers, transports }: PurchaseModalProps) => {
+  const isEditing = initialData != null;
+
   const [formData, setFormData] = useState<PurchaseFormData>({
     species: '',
     PurchaseDate: new Date().toISOString().split('T')[0],
-    supplier: '',
-    supplierLocation: '',
-    extractor: '',
-    entryDate: '',
-    driver: '',
-    plate: '',
-    brand: '',
+    providerId: '',
+    transportId: '',
     cefo: '',
     woodState: 'tronca',
     unitPrice: 0,
     dimensions: [{ diameter: 0, length: 0 }]
   });
 
+  useEffect(() => {
+    if (isEditing) {
+      const provider = providers.find(p => p.name === initialData.supplier);
+      const transport = transports.find(t => t.vehicle.plate === initialData.plate);
+
+      setFormData({
+        species: initialData.species,
+        PurchaseDate: initialData.PurchaseDate,
+        providerId: provider ? String(provider.id) : '',
+        transportId: transport ? String(transport.id) : '',
+        cefo: initialData.cefo,
+        woodState: initialData.woodState,
+        unitPrice: 0, 
+        dimensions: initialData.dimensions?.map(d => ({ diameter: d.diameter, length: d.length })) || [{ diameter: 0, length: 0 }],
+      });
+    }
+  }, [initialData, isEditing, providers, transports]);
+
+
+  const selectedProvider = useMemo(() => providers.find(p => String(p.id) === formData.providerId), [formData.providerId, providers]);
+  const selectedTransport = useMemo(() => transports.find(t => String(t.id) === formData.transportId), [formData.transportId, transports]);
+
   const totalCost = useMemo(() => {
-    const boardFeet = formData.dimensions.reduce(
+    const totalBoardFeet = formData.dimensions.reduce(
       (sum, dim) => sum + (dim.diameter * dim.diameter * dim.length) / 144, 
       0
     );
-    return boardFeet * formData.unitPrice;
+    return totalBoardFeet * formData.unitPrice;
   }, [formData.dimensions, formData.unitPrice]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -71,165 +81,82 @@ const PurchaseModal = ({ onClose, onSave }: PurchaseModalProps) => {
   };
 
   const handleSubmit = () => {
-    onSave({
-      id: Date.now(),
+    if (!selectedProvider || !selectedTransport) {
+      alert("Por favor, seleccione un proveedor y un transporte.");
+      return;
+    }
+
+    const payload: Omit<Purchase, 'id'> = {
       species: formData.species,
       PurchaseDate: formData.PurchaseDate,
-      supplier: formData.supplier,
-      supplierLocation: formData.supplierLocation,
-      extractor: formData.extractor,
-      entryDate: formData.entryDate,
-      driver: formData.driver,
-      plate: formData.plate,
-      brand: formData.brand,
+      supplier: selectedProvider.name,
+      supplierLocation: selectedProvider.address,
+      extractor: selectedProvider.name,
+      driver: selectedTransport.driver.fullName,
+      plate: selectedTransport.vehicle.plate,
+      brand: selectedTransport.vehicle.brand,
       cefo: formData.cefo,
       totalCost,
-      woodState: formData.woodState
-    });
+      woodState: formData.woodState,
+      dimensions: formData.dimensions.map(d => ({
+        ...d,
+        boardFoot: (d.diameter * d.diameter * d.length) / 144
+      }))
+    };
+    
+    onSave({ ...payload, id: initialData?.id });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-start pt-10 z-50 overflow-y-auto">
       <div className="bg-white p-6 rounded shadow-lg w-full max-w-3xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Registrar Nueva Compra</h2>
-          <button 
-            onClick={onClose} 
-            className={`text-xl font-bold text-gray-600 hover:text-gray-900 ${buttonClassStile}`}
-          >
-            ×
-          </button>
-        </div>
+        <h2 className="text-xl font-bold mb-4">{isEditing ? 'Editar Compra' : 'Registrar Nueva Compra'}</h2>
+        
         <div className="space-y-4">
-          <div>
-            <Label>Especie de Madera</Label>
-            <select 
-              name="species"
-              className={`w-full ${inputClassStile}`} 
-              value={formData.species}
-              onChange={handleChange}
-            >
-              <option value="">Seleccione una especie</option>
-              <option value="Roble">Roble</option>
-              <option value="Pino">Pino</option>
-              <option value="Cedro">Cedro</option>
-            </select>
-          </div>
-
-          <div>
-            <Label>Estado de Madera</Label>
-            <div className="flex items-center space-x-4 mt-1">
-              <label className="flex items-center">
-                <input 
-                  type="radio" 
-                  name="woodState" 
-                  value="tronca" 
-                  checked={formData.woodState === 'tronca'}
-                  onChange={() => setFormData(prev => ({ ...prev, woodState: 'tronca' }))}
-                  className="form-radio h-4 w-4 text-blue-600"
-                />
-                <span className="ml-2 text-sm text-gray-700">Tronca (materia prima)</span>
-              </label>
-              <label className="flex items-center">
-                <input 
-                  type="radio" 
-                  name="woodState" 
-                  value="seca_tablones" 
-                  checked={formData.woodState === 'seca_tablones'}
-                  onChange={() => setFormData(prev => ({ ...prev, woodState: 'seca_tablones' }))}
-                  className="form-radio h-4 w-4 text-blue-600"
-                />
-                <span className="ml-2 text-sm text-gray-700">Madera seca / Tablones</span>
-              </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Fecha de Compra</Label>
+              <Input type="date" name="PurchaseDate" value={formData.PurchaseDate} onChange={handleChange} className={inputClassStile} />
+            </div>
+            <div>
+              <Label>Especie de Madera</Label>
+              <select name="species" value={formData.species} onChange={handleChange} className={`w-full ${inputClassStile}`}>
+                <option value="">Seleccione una especie</option>
+                <option value="Roble">Roble</option>
+                <option value="Pino">Pino</option>
+                <option value="Cedro">Cedro</option>
+              </select>
             </div>
           </div>
 
           <fieldset className="border p-4 rounded-md">
             <legend className="text-lg font-semibold text-gray-700 px-2">Proveedor</legend>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-              <div>
-                <Label>Nombre del Proveedor</Label>
-                <Input 
-                  name="supplier"
-                  className={inputClassStile}
-                  value={formData.supplier} 
-                  onChange={handleChange} 
-                />
+            <select name="providerId" value={formData.providerId} onChange={handleChange} className={`w-full ${inputClassStile}`}>
+              <option value="">Seleccione un proveedor</option>
+              {providers.map(p => <option key={p.id} value={p.id}>{p.name} - {p.companyName}</option>)}
+            </select>
+            {selectedProvider && (
+              <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                <p><strong>Lugar:</strong> {selectedProvider.address}</p>
               </div>
-              <div>
-                <Label>Lugar</Label>
-                <Input 
-                  name="supplierLocation"
-                  className={inputClassStile}
-                  value={formData.supplierLocation} 
-                  onChange={handleChange} 
-                />
-              </div>
-              <div>
-                <Label>Extractor</Label>
-                <Input 
-                  name="extractor"
-                  className={inputClassStile}
-                  value={formData.extractor} 
-                  onChange={handleChange} 
-                />
-              </div>
-              <div>
-                <Label>Fecha de Ingreso</Label>
-                <Input 
-                  type="date" 
-                  name="entryDate"
-                  className={inputClassStile}
-                  value={formData.entryDate} 
-                  onChange={handleChange} 
-                />
-              </div>
-            </div>
+            )}
           </fieldset>
 
           <fieldset className="border p-4 rounded-md">
-            <legend className="text-lg font-semibold text-gray-700 px-2">Datos de Transporte</legend>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-              <div>
-                <Label>Chofer</Label>
-                <Input 
-                  name="driver"
-                  className={inputClassStile}
-                  value={formData.driver} 
-                  onChange={handleChange} 
-                />
+            <legend className="text-lg font-semibold text-gray-700 px-2">Transporte</legend>
+            <select name="transportId" value={formData.transportId} onChange={handleChange} className={`w-full ${inputClassStile}`}>
+              <option value="">Seleccione un transporte</option>
+              {transports.map(t => <option key={t.id} value={t.id}>{t.driver.fullName} - {t.vehicle.plate}</option>)}
+            </select>
+            {selectedTransport && (
+              <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                <p><strong>Chofer:</strong> {selectedTransport.driver.fullName}</p>
+                <p><strong>Vehículo:</strong> {selectedTransport.vehicle.brand} ({selectedTransport.vehicle.plate})</p>
               </div>
-              <div>
-                <Label>Número de Placa</Label>
-                <Input 
-                  name="plate"
-                  className={inputClassStile}
-                  value={formData.plate} 
-                  onChange={handleChange} 
-                />
-              </div>
-              <div>
-                <Label>Marca</Label>
-                <Input 
-                  name="brand"
-                  className={inputClassStile}
-                  value={formData.brand} 
-                  onChange={handleChange} 
-                />
-              </div>
-              <div>
-                <Label>Número de CEFO</Label>
-                <Input 
-                  name="cefo"
-                  className={inputClassStile}
-                  value={formData.cefo} 
-                  onChange={handleChange} 
-                />
-              </div>
-            </div>
+            )}
           </fieldset>
-          
+
           <div>
             <Label>Precio Unitario (por Pie Tablar)</Label>
             <Input 
@@ -271,18 +198,8 @@ const PurchaseModal = ({ onClose, onSave }: PurchaseModalProps) => {
           </div>
 
           <div className="flex justify-end space-x-3">
-            <Button 
-              onClick={onClose} 
-              className={`bg-gray-500 hover:bg-gray-700 text-white ${buttonClassStile}`}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSubmit} 
-              className={`bg-green-500 hover:bg-green-700 text-white ${buttonClassStile}`}
-            >
-              Guardar Compra
-            </Button>
+            <Button onClick={onClose} className={`bg-gray-500 hover:bg-gray-700 text-white ${buttonClassStile}`}>Cancelar</Button>
+            <Button onClick={handleSubmit} className={`bg-green-500 hover:bg-green-700 text-white ${buttonClassStile}`}>Guardar Compra</Button>
           </div>
         </div>
       </div>

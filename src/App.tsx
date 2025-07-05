@@ -6,6 +6,10 @@ import PurchasePage from './pages/PurchasePage';
 import ReportPage from './pages/ReportPage';
 import StockPage from './pages/StockPage';
 import NewPurchaseWizardFormik from './pages/NewPurchaseWizardFormik';
+import ClientsPage from './pages/ClientsPage';
+import WoodTypesPage from './pages/WoodTypesPage';
+import TransportPage from './pages/TransportPage';
+import ProvidersPage from './pages/ProvidersPage';
 
 function App() {
     return (
@@ -18,7 +22,11 @@ function App() {
           <Route path="purchase" element={<PurchasePage />} />
           <Route path="purchase/new" element={<NewPurchaseWizardFormik />} />
           <Route path="stock" element={<StockPage />} />
-          <Route path="report" element={<ReportPage />} />
+          <Route path="reports" element={<ReportPage />} />
+          <Route path="clients" element={<ClientsPage />} />
+          <Route path="providers" element={<ProvidersPage />} />
+          <Route path="wood-types" element={<WoodTypesPage />} />
+          <Route path="transport" element={<TransportPage />} />
         </Route>
       </Routes>
     </Router>
