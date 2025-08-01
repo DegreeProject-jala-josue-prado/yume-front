@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, FormEvent } from 'react';
 import Button from '../atoms/Button';
 import Input from '../atoms/Input';
 import Label from '../atoms/Label';
 import DimensionInputGroup from '../molecules/DimensionInputGroup';
 import { Purchase, PurchaseFormData } from '../../types/Purchase';
-import { Provider } from '../../types/Provider'; 
+import { Provider } from '../../types/Provider';
 import { Transport } from '../../types/Transport';
 
 const inputClassStile = "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline";
@@ -21,7 +21,7 @@ interface PurchaseModalProps {
 const PurchaseModal = ({ onClose, onSave, initialData, providers, transports }: PurchaseModalProps) => {
   const isEditing = initialData != null;
 
-  const [formData, setFormData] = useState<PurchaseFormData>({
+  const defaultFormData: PurchaseFormData = {
     species: '',
     PurchaseDate: new Date().toISOString().split('T')[0],
     providerId: '',
@@ -30,12 +30,17 @@ const PurchaseModal = ({ onClose, onSave, initialData, providers, transports }: 
     woodState: 'tronca',
     unitPrice: 0,
     dimensions: [{ diameter: 0, length: 0 }]
-  });
+  };
+
+  const [formData, setFormData] = useState<PurchaseFormData>(defaultFormData);
 
   useEffect(() => {
-    if (isEditing) {
+    if (isEditing && initialData) {
       const provider = providers.find(p => p.name === initialData.supplier);
       const transport = transports.find(t => t.vehicle.plate === initialData.plate);
+      
+      const totalBoardFeet = initialData.dimensions.reduce((sum, dim) => sum + dim.boardFoot, 0);
+      const calculatedUnitPrice = totalBoardFeet > 0 ? initialData.totalCost / totalBoardFeet : 0;
 
       setFormData({
         species: initialData.species,
@@ -44,43 +49,43 @@ const PurchaseModal = ({ onClose, onSave, initialData, providers, transports }: 
         transportId: transport ? String(transport.id) : '',
         cefo: initialData.cefo,
         woodState: initialData.woodState,
-        unitPrice: 0, 
-        dimensions: initialData.dimensions?.map(d => ({ diameter: d.diameter, length: d.length })) || [{ diameter: 0, length: 0 }],
+        unitPrice: calculatedUnitPrice,
+        dimensions: initialData.dimensions.map(d => ({ diameter: d.diameter, length: d.length })),
       });
+    } else {
+      setFormData(defaultFormData);
     }
   }, [initialData, isEditing, providers, transports]);
-
 
   const selectedProvider = useMemo(() => providers.find(p => String(p.id) === formData.providerId), [formData.providerId, providers]);
   const selectedTransport = useMemo(() => transports.find(t => String(t.id) === formData.transportId), [formData.transportId, transports]);
 
   const totalCost = useMemo(() => {
     const totalBoardFeet = formData.dimensions.reduce(
-      (sum, dim) => sum + (dim.diameter * dim.diameter * dim.length) / 144, 
-      0
+      (sum, dim) => sum + (dim.diameter * dim.diameter * dim.length) / 144, 0
     );
     return totalBoardFeet * formData.unitPrice;
   }, [formData.dimensions, formData.unitPrice]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const finalValue = name === 'unitPrice' ? parseFloat(value) || 0 : value;
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const handleDimensionChange = (index: number, field: 'diameter' | 'length', value: number) => {
     const updatedDimensions = [...formData.dimensions];
-    updatedDimensions[index] = { ...updatedDimensions[index], [field]: value };
+    const numericValue = Number(value) || 0;
+    updatedDimensions[index] = { ...updatedDimensions[index], [field]: numericValue };
     setFormData(prev => ({ ...prev, dimensions: updatedDimensions }));
   };
 
   const handleAddDimension = () => {
-    setFormData(prev => ({
-      ...prev,
-      dimensions: [...prev.dimensions, { diameter: 0, length: 0 }]
-    }));
+    setFormData(prev => ({ ...prev, dimensions: [...prev.dimensions, { diameter: 0, length: 0 }] }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
     if (!selectedProvider || !selectedTransport) {
       alert("Por favor, seleccione un proveedor y un transporte.");
       return;
@@ -98,30 +103,26 @@ const PurchaseModal = ({ onClose, onSave, initialData, providers, transports }: 
       cefo: formData.cefo,
       totalCost,
       woodState: formData.woodState,
-      dimensions: formData.dimensions.map(d => ({
-        ...d,
-        boardFoot: (d.diameter * d.diameter * d.length) / 144
-      }))
+      dimensions: formData.dimensions.map(d => ({ ...d, boardFoot: (d.diameter * d.diameter * d.length) / 144 }))
     };
     
     onSave({ ...payload, id: initialData?.id });
-    onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-start pt-10 z-50 overflow-y-auto">
-      <div className="bg-white p-6 rounded shadow-lg w-full max-w-3xl">
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-lg w-full max-w-3xl">
         <h2 className="text-xl font-bold mb-4">{isEditing ? 'Editar Compra' : 'Registrar Nueva Compra'}</h2>
         
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Fecha de Compra</Label>
-              <Input type="date" name="PurchaseDate" value={formData.PurchaseDate} onChange={handleChange} className={inputClassStile} />
+              <Input type="date" name="PurchaseDate" value={formData.PurchaseDate} onChange={handleChange} className={inputClassStile} required/>
             </div>
             <div>
               <Label>Especie de Madera</Label>
-              <select name="species" value={formData.species} onChange={handleChange} className={`w-full ${inputClassStile}`}>
+              <select name="species" value={formData.species} onChange={handleChange} className={`w-full ${inputClassStile}`} required>
                 <option value="">Seleccione una especie</option>
                 <option value="Roble">Roble</option>
                 <option value="Pino">Pino</option>
@@ -132,7 +133,7 @@ const PurchaseModal = ({ onClose, onSave, initialData, providers, transports }: 
 
           <fieldset className="border p-4 rounded-md">
             <legend className="text-lg font-semibold text-gray-700 px-2">Proveedor</legend>
-            <select name="providerId" value={formData.providerId} onChange={handleChange} className={`w-full ${inputClassStile}`}>
+            <select name="providerId" value={formData.providerId} onChange={handleChange} className={`w-full ${inputClassStile}`} required>
               <option value="">Seleccione un proveedor</option>
               {providers.map(p => <option key={p.id} value={p.id}>{p.name} - {p.companyName}</option>)}
             </select>
@@ -145,7 +146,7 @@ const PurchaseModal = ({ onClose, onSave, initialData, providers, transports }: 
 
           <fieldset className="border p-4 rounded-md">
             <legend className="text-lg font-semibold text-gray-700 px-2">Transporte</legend>
-            <select name="transportId" value={formData.transportId} onChange={handleChange} className={`w-full ${inputClassStile}`}>
+            <select name="transportId" value={formData.transportId} onChange={handleChange} className={`w-full ${inputClassStile}`} required>
               <option value="">Seleccione un transporte</option>
               {transports.map(t => <option key={t.id} value={t.id}>{t.driver.fullName} - {t.vehicle.plate}</option>)}
             </select>
@@ -159,50 +160,30 @@ const PurchaseModal = ({ onClose, onSave, initialData, providers, transports }: 
 
           <div>
             <Label>Precio Unitario (por Pie Tablar)</Label>
-            <Input 
-              type="number" 
-              name="unitPrice"
-              className={inputClassStile}
-              step="0.01" 
-              value={formData.unitPrice} 
-              onChange={handleChange} 
-            />
+            <Input type="number" name="unitPrice" className={inputClassStile} step="0.01" value={formData.unitPrice} onChange={handleChange} required/>
           </div>
 
           <fieldset className="border p-4 rounded-md">
             <legend className="text-lg font-semibold text-gray-700 px-2">Dimensiones de Unidades de Madera</legend>
             {formData.dimensions.map((dim, i) => (
-              <DimensionInputGroup 
-                key={i} 
-                index={i} 
-                dimension={dim} 
-                onChange={handleDimensionChange} 
-              />
+              <DimensionInputGroup key={i} index={i} dimension={dim} onChange={handleDimensionChange} />
             ))}
-            <Button 
-              onClick={handleAddDimension} 
-              className={`mt-2 text-green-600 hover:text-green-800 text-sm ${buttonClassStile}`}
-            >
+            <Button onClick={handleAddDimension} className={`mt-2 bg-gray-100 hover:bg-gray-200 text-green-600 ${buttonClassStile}`}>
               + Agregar otra dimensión
             </Button>
           </fieldset>
 
           <div>
             <Label>Costo Total (Calculado)</Label>
-            <Input 
-              type="text" 
-              readOnly 
-              value={`${totalCost.toFixed(2)}`} 
-              className="bg-gray-100 text-xl font-bold" 
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3">
-            <Button onClick={onClose} className={`bg-gray-500 hover:bg-gray-700 text-white ${buttonClassStile}`}>Cancelar</Button>
-            <Button onClick={handleSubmit} className={`bg-green-500 hover:bg-green-700 text-white ${buttonClassStile}`}>Guardar Compra</Button>
+            <Input type="text" readOnly value={`$${totalCost.toFixed(2)}`} className="bg-gray-100 text-xl font-bold" />
           </div>
         </div>
-      </div>
+        
+        <div className="flex justify-end space-x-3 pt-4 mt-4 border-t">
+          <Button onClick={onClose} className={`bg-gray-500 hover:bg-gray-700 text-white ${buttonClassStile}`}>Cancelar</Button>
+          <Button className={`bg-green-500 hover:bg-green-700 text-white ${buttonClassStile}`}>Guardar Compra</Button>
+        </div>
+      </form>
     </div>
   );
 };

@@ -1,3 +1,5 @@
+// src/components/Sidebar.tsx
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -24,15 +26,24 @@ interface MenuItem {
   subItems?: SubItem[];
 }
 
+// --- ARRAY DE MENÚ MODIFICADO ---
 const menuItems: MenuItem[] = [
+  // 1. "Tipos de Madera" ahora es el primer elemento principal
+  {
+    key: 'wood-types',
+    title: 'Tipos de Madera',
+    icon: HiCollection,
+    to: 'wood-types',
+    // No tiene subItems
+  },
   {
     key: 'ventas',
     title: 'Ventas',
     icon: HiShoppingCart,
     to: 'sales', 
     subItems: [
+      // Se eliminó "Tipos de Madera" de aquí
       { title: 'Clientes', to: 'clients', icon: HiUserGroup },
-      { title: 'Tipos de Madera', to: 'wood-types', icon: HiCollection },
     ],
   },
   {
@@ -74,6 +85,7 @@ const Sidebar: React.FC = () => {
       <nav className="flex flex-col">
         {menuItems.map((item, index) => (
           <div key={item.key}>
+            {/* El separador sigue funcionando como antes */}
             {index > 0 && <hr className="my-3 border-gray-200" />}
 
             <NavLink to={item.to} className={mainLinkClass} end>
@@ -81,6 +93,7 @@ const Sidebar: React.FC = () => {
               <span>{item.title}</span>
             </NavLink>
 
+            {/* Esta lógica renderizará los sub-items si existen */}
             {item.subItems && (
               <div className="mt-2 pl-5 flex flex-col gap-1">
                 {item.subItems.map((sub) => (

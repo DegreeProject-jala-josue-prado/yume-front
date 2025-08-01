@@ -155,7 +155,7 @@ const ProviderModal = ({ onClose, onSave, initialData, allWoodTypes }: ProviderM
                     </select>
                   </div>
                   <div className="col-span-5 relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Bs</span>
                     <Input
                       type="number"
                       placeholder="Precio"

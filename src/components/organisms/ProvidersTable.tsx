@@ -66,7 +66,7 @@ const ProvidersTable = ({ providers, onEdit, onDelete }: ProvidersTableProps) =>
                         <ul className="list-disc list-inside space-y-1">
                           {provider.species.map((specie) => (
                             <li key={specie.id} className="text-sm text-gray-600">
-                              <span className="font-medium">{specie.woodTypeName}:</span> ${specie.pricePerBoardFoot.toFixed(2)} / pie tablar
+                              <span className="font-medium">{specie.woodTypeName}:</span> Bs{specie.pricePerBoardFoot.toFixed(2)} / pie tablar
                             </li>
                           ))}
                           {provider.species.length === 0 && (
